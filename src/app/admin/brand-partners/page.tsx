@@ -518,7 +518,7 @@ export default function BrandPartnersPage() {
 
       {/* EDIT PARTNER MODAL */}
       {editingPartner && editFormData && (
-        <Modal isOpen={!!editingPartner} onClose={() => setEditingPartner(null)} title={`Edit Brand Partner: ${editingPartner.name}`}>
+        <Modal open={!!editingPartner} onClose={() => setEditingPartner(null)} title={`Edit Brand Partner: ${editingPartner.name}`} size="lg">
           <form onSubmit={handleUpdatePartner} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Nama Brand Partner *">
