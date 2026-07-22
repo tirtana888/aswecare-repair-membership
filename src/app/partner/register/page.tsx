@@ -81,14 +81,25 @@ export default function PartnerRegisterPage() {
         supabase.from('subcategories').select('*').eq('is_active', true),
         supabase.from('membership_tiers').select('*').eq('is_active', true).order('duration_months')
       ])
-      
-      if (cats) setCategories(cats)
-      
-      if (subcats) {
-        const filteredSubcats = partnerCustomSubcats.length > 0
-          ? subcats.filter(sc => partnerCustomSubcats.includes(sc.id))
-          : subcats
-        setSubcategories(filteredSubcats)
+
+      let filteredSubcats = subcats || []
+      if (partnerCustomSubcats.length > 0 && subcats) {
+        filteredSubcats = subcats.filter(sc => partnerCustomSubcats.includes(sc.id))
+      }
+      setSubcategories(filteredSubcats)
+
+      // Filter categories to ONLY show categories that contain active subcategories for this partner
+      if (cats && filteredSubcats.length > 0) {
+        const activeCategoryIds = new Set(filteredSubcats.map(sc => sc.category_id))
+        const activeCats = cats.filter(c => activeCategoryIds.has(c.id))
+        setCategories(activeCats)
+
+        // If only 1 category is active for this partner, auto-select it!
+        if (activeCats.length === 1) {
+          setSelectedCategory(activeCats[0].id)
+        }
+      } else if (cats) {
+        setCategories(cats)
       }
 
       if (tierData) {
