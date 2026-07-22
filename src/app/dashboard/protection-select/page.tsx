@@ -27,6 +27,22 @@ function ProtectionSelectContent() {
   }, [itemId])
 
   const fetchData = async () => {
+    let itemData: any = null
+    if (itemId) {
+      const { data, error } = await supabase
+        .from('items')
+        .select('*, subcategories(name, category_id, coverage_description)')
+        .eq('id', itemId)
+        .single()
+
+      if (error || !data) {
+        setError('Barang tidak ditemukan.')
+      } else {
+        itemData = data
+        setItem(data)
+      }
+    }
+
     const { data: tiers } = await supabase
       .from('membership_tiers')
       .select('*')
@@ -34,23 +50,21 @@ function ProtectionSelectContent() {
       .order('duration_months')
 
     if (tiers && tiers.length > 0) {
-      setMembershipTiers(tiers)
-      setSelectedTier(tiers[0])
+      const itemSubcatId = itemData?.subcategory_id
+      const itemCatId = itemData?.subcategories?.category_id
+
+      // Filter tiers: specifically matching subcategory OR matching category OR global (both null)
+      const matchingTiers = tiers.filter((t) => {
+        if (t.subcategory_id && itemSubcatId) return t.subcategory_id === itemSubcatId
+        if (t.category_id && itemCatId) return t.category_id === itemCatId
+        return !t.subcategory_id && !t.category_id
+      })
+
+      const finalTiers = matchingTiers.length > 0 ? matchingTiers : tiers
+      setMembershipTiers(finalTiers)
+      setSelectedTier(finalTiers[0])
     }
 
-    if (itemId) {
-      const { data, error } = await supabase
-        .from('items')
-        .select('*, subcategories(name, coverage_description)')
-        .eq('id', itemId)
-        .single()
-
-      if (error || !data) {
-        setError('Barang tidak ditemukan.')
-      } else {
-        setItem(data)
-      }
-    }
     setLoading(false)
   }
 

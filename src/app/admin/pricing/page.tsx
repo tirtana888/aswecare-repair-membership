@@ -1,14 +1,29 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Power, PowerOff, Save, Clock, Zap } from 'lucide-react'
+import { Plus, Power, PowerOff, Save, Clock, Zap, Layers, Trash2, Tag } from 'lucide-react'
 import { PageHeader, Card, CardHeader, CardBody, Button, FormField, Input, Select, EmptyState, useToast } from '@/components/ui'
 import { formatIDR, cn } from '@/lib/utils'
+
+interface Category {
+  id: string
+  name: string
+}
+
+interface Subcategory {
+  id: string
+  category_id: string
+  name: string
+}
 
 interface Tier {
   id: string
   name: string
   plan_tier: string
+  category_id?: string | null
+  subcategory_id?: string | null
+  categories?: { name: string } | null
+  subcategories?: { name: string } | null
   duration_months: number
   bonus_months: number
   bonus_quota: number
@@ -23,12 +38,23 @@ interface Tier {
 export default function PricingPage() {
   const toast = useToast()
   const [tiers, setTiers] = useState<Tier[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   const [formData, setFormData] = useState({
-    name: '', plan_tier: 'basic', duration_months: 12, bonus_months: 0,
-    bonus_quota: 0, waiting_period_days: 14, original_price: 0, price: 0, admin_fee: 0,
+    name: '',
+    plan_tier: 'basic',
+    category_id: '',
+    subcategory_id: '',
+    duration_months: 12,
+    bonus_months: 0,
+    bonus_quota: 0,
+    waiting_period_days: 14,
+    original_price: 0,
+    price: 0,
+    admin_fee: 0,
   })
 
   useEffect(() => {
@@ -40,8 +66,14 @@ export default function PricingPage() {
     try {
       const res = await fetch('/api/admin/pricing')
       if (res.ok) {
-        const data = await res.json()
-        if (Array.isArray(data)) setTiers(data)
+        const json = await res.json()
+        if (json.tiers) {
+          setTiers(json.tiers)
+          setCategories(json.categories || [])
+          setSubcategories(json.subcategories || [])
+        } else if (Array.isArray(json)) {
+          setTiers(json)
+        }
       }
     } catch (err) {
       console.error(err)
@@ -62,6 +94,8 @@ export default function PricingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          category_id: formData.category_id || null,
+          subcategory_id: formData.subcategory_id || null,
           discount_percentage: discountPercentage,
         }),
       })
@@ -69,7 +103,10 @@ export default function PricingPage() {
       const data = await res.json()
       if (res.ok && data.success) {
         fetchTiers()
-        setFormData({ name: '', plan_tier: 'basic', duration_months: 12, bonus_months: 0, bonus_quota: 0, waiting_period_days: 14, original_price: 0, price: 0, admin_fee: 0 })
+        setFormData({
+          name: '', plan_tier: 'basic', category_id: '', subcategory_id: '',
+          duration_months: 12, bonus_months: 0, bonus_quota: 0, waiting_period_days: 14, original_price: 0, price: 0, admin_fee: 0
+        })
         toast.success('Paket harga baru berhasil disimpan!')
       } else {
         toast.error(data.message || 'Gagal menyimpan paket harga')
@@ -100,16 +137,35 @@ export default function PricingPage() {
     }
   }
 
+  const handleDeleteTier = async (id: string, name: string) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus paket "${name}"?`)) return
+    try {
+      const res = await fetch(`/api/admin/pricing?id=${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        fetchTiers()
+        toast.success('Paket berhasil dihapus')
+      } else {
+        toast.error('Gagal menghapus paket')
+      }
+    } catch (err) {
+      toast.error('Gagal menghapus paket')
+    }
+  }
+
   const formatPercent = (val: number) => new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val) + '%'
+
+  const filteredSubcategories = formData.category_id
+    ? subcategories.filter(sc => sc.category_id === formData.category_id)
+    : subcategories
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Paket &amp; Harga (Mekanisme Masa Tenggang)" description="Atur harga paket proteksi, diskon, biaya admin, serta pilihan masa tenggang (waiting period) yang customizable." />
+      <PageHeader title="Paket &amp; Harga (Per Kategori &amp; Subkategori)" description="Atur paket proteksi khusus per kategori/subkategori produk (misal: Smartphone vs Sneaker), diskon, biaya admin, serta masa tenggang." />
 
       <Card className="border border-slate-200 shadow-sm rounded-2xl">
         <CardHeader>
           <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-            <Plus className="w-4 h-4 text-indigo-600" /> Buat Paket Baru dengan Custom Masa Tenggang
+            <Plus className="w-4 h-4 text-indigo-600" /> Buat Paket Baru Spesifik Kategori / Subkategori
           </h2>
         </CardHeader>
         <CardBody>
@@ -119,8 +175,34 @@ export default function PricingPage() {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Contoh: Paket Basic 12 Bulan (Tanpa Masa Tunggu)"
+                placeholder="Contoh: Paket Garansi Smartphone 12 Bulan (Tanpa Masa Tunggu)"
               />
+            </FormField>
+
+            {/* Selection for Category */}
+            <FormField label="Kategori Utama Target">
+              <Select
+                value={formData.category_id}
+                onChange={(e) => setFormData({ ...formData, category_id: e.target.value, subcategory_id: '' })}
+              >
+                <option value="">🌐 Semua Kategori (Global)</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </Select>
+            </FormField>
+
+            {/* Selection for Subcategory */}
+            <FormField label="Subkategori Spesifik Target">
+              <Select
+                value={formData.subcategory_id}
+                onChange={(e) => setFormData({ ...formData, subcategory_id: e.target.value })}
+              >
+                <option value="">📱/👟 Semua Subkategori</option>
+                {filteredSubcategories.map((sub) => (
+                  <option key={sub.id} value={sub.id}>{sub.name}</option>
+                ))}
+              </Select>
             </FormField>
 
             <FormField label="Tingkat Paket">
@@ -196,88 +278,109 @@ export default function PricingPage() {
         <Card><EmptyState title="Belum ada paket harga" description="Buat paket harga baru menggunakan formulir di atas." /></Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tiers.map((tier) => (
-            <Card key={tier.id} hover className={cn('p-5 border border-slate-200/80 rounded-2xl shadow-xs', !tier.is_active && 'opacity-60')}>
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        'text-[11px] font-bold px-2 py-0.5 rounded-full uppercase',
-                        tier.plan_tier === 'basic' ? 'bg-indigo-50 text-indigo-700' : 'bg-purple-50 text-purple-700'
-                      )}
-                    >
-                      {tier.plan_tier}
-                    </span>
+          {tiers.map((tier) => {
+            const catName = tier.categories?.name
+            const subcatName = tier.subcategories?.name
+            const targetLabel = subcatName ? `${catName ? catName + ' - ' : ''}${subcatName}` : catName || 'Semua Kategori (Global)'
 
-                    {/* Masa Tenggang Badge */}
-                    <span className={cn(
-                      "text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border",
-                      (tier.waiting_period_days || 14) === 0
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-amber-50 text-amber-800 border-amber-200"
-                    )}>
-                      {(tier.waiting_period_days || 14) === 0 ? (
-                        <>
-                          <Zap className="w-3 h-3 text-emerald-600" />
-                          <span>0 Hari (Instant)</span>
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-3 h-3 text-amber-600" />
-                          <span>Masa Tunggu {tier.waiting_period_days || 14} Hari</span>
-                        </>
-                      )}
-                    </span>
+            return (
+              <Card key={tier.id} hover className={cn('p-5 border border-slate-200/80 rounded-2xl shadow-xs space-y-4', !tier.is_active && 'opacity-60')}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={cn(
+                          'text-[10px] font-bold px-2 py-0.5 rounded-full uppercase',
+                          tier.plan_tier === 'basic' ? 'bg-indigo-50 text-indigo-700' : 'bg-purple-50 text-purple-700'
+                        )}
+                      >
+                        {tier.plan_tier}
+                      </span>
+
+                      {/* Target Category Badge */}
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 flex items-center gap-1">
+                        <Tag className="w-3 h-3 text-blue-600" />
+                        <span>{targetLabel}</span>
+                      </span>
+
+                      {/* Masa Tenggang Badge */}
+                      <span className={cn(
+                        "text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border",
+                        (tier.waiting_period_days || 14) === 0
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-amber-50 text-amber-800 border-amber-200"
+                      )}>
+                        {(tier.waiting_period_days || 14) === 0 ? (
+                          <>
+                            <Zap className="w-3 h-3 text-emerald-600" />
+                            <span>0 Hari</span>
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="w-3 h-3 text-amber-600" />
+                            <span>{tier.waiting_period_days || 14} Hari</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+
+                    <h3 className="text-base font-bold text-slate-900 mt-2">{tier.name}</h3>
+                    <p className="text-xs text-slate-500">
+                      {tier.duration_months} Bulan {tier.bonus_months > 0 && `+ ${tier.bonus_months} Bln`}
+                    </p>
                   </div>
 
-                  <h3 className="text-base font-bold text-slate-900 mt-2">{tier.name}</h3>
-                  <p className="text-xs text-slate-500">
-                    {tier.duration_months} Bulan {tier.bonus_months > 0 && `+ ${tier.bonus_months} Bln`}
-                  </p>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => toggleActive(tier.id, tier.is_active)}
+                      className={cn(
+                        'w-8 h-8 inline-flex items-center justify-center rounded-full transition-colors',
+                        tier.is_active ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' : 'text-slate-400 bg-slate-100 hover:bg-slate-200'
+                      )}
+                      title={tier.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                    >
+                      {tier.is_active ? <Power size={14} /> : <PowerOff size={14} />}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTier(tier.id, tier.name)}
+                      className="w-8 h-8 inline-flex items-center justify-center rounded-full text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors"
+                      title="Hapus Paket"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => toggleActive(tier.id, tier.is_active)}
-                  className={cn(
-                    'min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full transition-colors',
-                    tier.is_active ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' : 'text-slate-400 bg-slate-100 hover:bg-slate-200'
+
+                <div className="space-y-2 pt-3 border-t border-slate-100 text-sm">
+                  {tier.original_price > tier.price && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Harga Asli</span>
+                      <span className="line-through text-slate-400">{formatIDR(tier.original_price)}</span>
+                    </div>
                   )}
-                  title={tier.is_active ? 'Nonaktifkan' : 'Aktifkan'}
-                  aria-label={tier.is_active ? `Nonaktifkan paket ${tier.name}` : `Aktifkan paket ${tier.name}`}
-                >
-                  {tier.is_active ? <Power size={16} /> : <PowerOff size={16} />}
-                </button>
-              </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Harga Jual</span>
+                    <span className="font-bold text-slate-900">{formatIDR(tier.price)}</span>
+                  </div>
+                  {tier.discount_percentage > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Diskon</span>
+                      <span className="font-semibold text-emerald-600">{formatPercent(tier.discount_percentage)}</span>
+                    </div>
+                  )}
+                </div>
 
-              <div className="space-y-2 pt-4 border-t border-slate-100 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Harga Asli</span>
-                  <span className="line-through text-slate-400">{formatIDR(tier.original_price)}</span>
+                <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
+                  <span className="bg-slate-100 text-slate-700 font-semibold px-2.5 py-1 rounded-md">
+                    Kuota Bonus: {tier.bonus_quota}x
+                  </span>
+                  <span className="text-slate-500 font-medium">
+                    Target: <strong className="text-slate-800">{targetLabel}</strong>
+                  </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Harga Jual</span>
-                  <span className="font-bold text-slate-900">{formatIDR(tier.price)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Diskon</span>
-                  <span className="font-semibold text-emerald-600">{formatPercent(tier.discount_percentage)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Biaya Admin</span>
-                  <span className="text-slate-700">{formatIDR(tier.admin_fee)}</span>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
-                <span className="bg-slate-100 text-slate-700 font-semibold px-2.5 py-1 rounded-md">
-                  Kuota Bonus: {tier.bonus_quota}x
-                </span>
-                <span className="text-slate-500 font-medium">
-                  Tenggang: <strong className="text-slate-800">{tier.waiting_period_days || 14} Hari</strong>
-                </span>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            )
+          })}
         </div>
       )}
     </div>

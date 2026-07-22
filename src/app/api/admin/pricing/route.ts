@@ -4,16 +4,25 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export async function GET() {
   try {
     const supabaseAdmin = createAdminClient()
-    const { data, error } = await supabaseAdmin
-      .from('membership_tiers')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const [
+      { data: tiers, error: tiersError },
+      { data: categories },
+      { data: subcategories }
+    ] = await Promise.all([
+      supabaseAdmin.from('membership_tiers').select('*, categories(name), subcategories(name)').order('created_at', { ascending: false }),
+      supabaseAdmin.from('categories').select('*'),
+      supabaseAdmin.from('subcategories').select('*').eq('is_active', true)
+    ])
 
-    if (error) {
-      return NextResponse.json({ message: error.message }, { status: 500 })
+    if (tiersError) {
+      return NextResponse.json({ message: tiersError.message }, { status: 500 })
     }
 
-    return NextResponse.json(data || [])
+    return NextResponse.json({
+      tiers: tiers || [],
+      categories: categories || [],
+      subcategories: subcategories || []
+    })
   } catch (err: any) {
     return NextResponse.json({ message: err.message }, { status: 500 })
   }
@@ -29,6 +38,8 @@ export async function POST(req: Request) {
       .insert([{
         name: body.name,
         plan_tier: body.plan_tier || 'basic',
+        category_id: body.category_id || null,
+        subcategory_id: body.subcategory_id || null,
         duration_months: body.duration_months || 12,
         bonus_months: body.bonus_months || 0,
         bonus_quota: body.bonus_quota || 0,
@@ -76,6 +87,27 @@ export async function PATCH(req: Request) {
     }
 
     return NextResponse.json({ success: true, data })
+  } catch (err: any) {
+    return NextResponse.json({ message: err.message }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
+    if (!id) {
+      return NextResponse.json({ message: 'ID required' }, { status: 400 })
+    }
+
+    const supabaseAdmin = createAdminClient()
+    const { error } = await supabaseAdmin.from('membership_tiers').delete().eq('id', id)
+
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, message: 'Paket berhasil dihapus' })
   } catch (err: any) {
     return NextResponse.json({ message: err.message }, { status: 500 })
   }
