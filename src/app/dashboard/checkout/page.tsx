@@ -110,11 +110,16 @@ function CheckoutContent() {
         throw new Error(data.message || 'Gagal memproses pembayaran QRIS BI')
       }
 
-      setPaidSuccess(true)
-      setTimeout(() => {
-        router.push('/dashboard')
-        router.refresh()
-      }, 2000)
+      if (data.invoiceUrl) {
+        // Redirect directly to Xendit Official Production QRIS Invoice Page
+        window.location.href = data.invoiceUrl
+      } else {
+        setPaidSuccess(true)
+        setTimeout(() => {
+          router.push('/dashboard')
+          router.refresh()
+        }, 2000)
+      }
     } catch (err: any) {
       setError(err.message)
       setProcessing(false)

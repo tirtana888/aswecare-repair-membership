@@ -96,7 +96,7 @@ export async function POST(req: Request) {
     const waitingPeriodEnd = new Date()
     waitingPeriodEnd.setDate(waitingPeriodEnd.getDate() + daysToWait)
 
-    // Upsert into plans table
+    // Upsert into plans table with status PENDING_PAYMENT (No auto-approve until Xendit webhook callback)
     const { data: planData, error: planError } = await supabaseAdmin
       .from('plans')
       .upsert({
@@ -104,13 +104,14 @@ export async function POST(req: Request) {
         plan_tier: planTier || 'basic',
         coverage_type: 'repair_only',
         billing_cycle: `${totalMonths}_months`,
-        status: 'active',
+        status: 'pending_payment',
         plan_start_date: startDate.toISOString().split('T')[0],
         plan_end_date: endDate.toISOString().split('T')[0],
         waiting_period_end_date: waitingPeriodEnd.toISOString().split('T')[0],
         annual_quota: totalQuota,
         quota_used: 0,
         xendit_invoice_id: xenditInvoiceId,
+        xendit_invoice_url: invoiceUrl,
       }, { onConflict: 'item_id' })
       .select()
       .single()
