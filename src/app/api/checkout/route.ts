@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(req: Request) {
   try {
-    const { itemId, planTier, durationMonths, bonusMonths, bonusQuota, amount, paymentMethod } = await req.json()
+    const { itemId, planTier, durationMonths, bonusMonths, bonusQuota, amount, paymentMethod = 'qris' } = await req.json()
 
     if (!itemId) {
       return NextResponse.json({ message: 'itemId wajib diisi' }, { status: 400 })
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Barang tidak ditemukan' }, { status: 404 })
     }
 
-    const mockInvoiceId = `inv_xendit_${Date.now()}_${Math.random().toString(36).substring(7)}`
+    const mockInvoiceId = `inv_qris_${Date.now()}_${Math.random().toString(36).substring(7)}`
     
     // Dynamic quota calculation: default quota + bonus quota
     const baseQuota = item.subcategories?.default_annual_quota || 2
@@ -35,9 +35,9 @@ export async function POST(req: Request) {
     endDate.setMonth(endDate.getMonth() + totalMonths)
 
     const waitingPeriodEnd = new Date()
-    waitingPeriodEnd.setDate(waitingPeriodEnd.getDate() + 14) // +14 days waiting period PRD §4.1
+    waitingPeriodEnd.setDate(waitingPeriodEnd.getDate() + 14) // +14 days waiting period
 
-    // Robust upsert into plans table
+    // Upsert into plans table with QRIS payment method
     const { data: planData, error: planError } = await supabaseAdmin
       .from('plans')
       .upsert({
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         plan_tier: planTier || 'basic',
         coverage_type: 'repair_only',
         billing_cycle: `${totalMonths}_months`,
-        status: 'active',
+        status: 'active', // Auto-Paid active status
         plan_start_date: startDate.toISOString().split('T')[0],
         plan_end_date: endDate.toISOString().split('T')[0],
         waiting_period_end_date: waitingPeriodEnd.toISOString().split('T')[0],
@@ -64,6 +64,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       plan: planData,
+      paymentMethod: 'qris',
       invoiceUrl: `https://checkout.xendit.co/web/${mockInvoiceId}`,
       invoiceId: mockInvoiceId,
     })

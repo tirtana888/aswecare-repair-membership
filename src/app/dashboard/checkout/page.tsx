@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Lock, ArrowLeft, QrCode, CreditCard, Building2, Gift, ShoppingBag, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Lock, ArrowLeft, QrCode, Gift, ShoppingBag, AlertCircle, CheckCircle2, ShieldCheck, Zap } from 'lucide-react'
 import { Card, Button } from '@/components/ui'
 import { cn, formatIDR } from '@/lib/utils'
 
@@ -14,7 +14,7 @@ function CheckoutContent() {
   const [item, setItem] = useState<any>(null)
   const [membershipTiers, setMembershipTiers] = useState<any[]>([])
   const [selectedTier, setSelectedTier] = useState<any>(null)
-  const [paymentMethod, setPaymentMethod] = useState('qris')
+  const [paymentMethod] = useState('qris') // QRIS ONLY
 
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
@@ -82,13 +82,13 @@ function CheckoutContent() {
           bonusMonths: selectedTier?.bonus_months || 0,
           bonusQuota: selectedTier?.bonus_quota || 0,
           amount: totalPrice,
-          paymentMethod,
+          paymentMethod: 'qris',
         }),
       })
 
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.message || 'Gagal memproses pembayaran')
+        throw new Error(data.message || 'Gagal memproses pembayaran QRIS')
       }
 
       setPaidSuccess(true)
@@ -115,41 +115,41 @@ function CheckoutContent() {
       </button>
 
       {paidSuccess && (
-        <div className="p-6 bg-emerald-600 text-white rounded-card shadow-lg space-y-3">
+        <div className="p-6 bg-emerald-600 text-white rounded-3xl shadow-xl space-y-3">
           <div className="flex items-center gap-2 font-bold text-lg">
             <CheckCircle2 className="w-6 h-6 text-white" />
-            <span>Pembayaran Lunas Otomatis! (Auto-Paid Instant)</span>
+            <span>Pembayaran QRIS Lunas Instan!</span>
           </div>
           <p className="text-xs text-emerald-100 leading-relaxed">
-            Pembayaran sebesar <strong>{formatIDR(totalPrice)}</strong> via {paymentMethod.toUpperCase()} berhasil dikonfirmasi secara instan. Garansi membership <strong>{selectedTier?.name}</strong> telah aktif.
+            Pembayaran sebesar <strong>{formatIDR(totalPrice)}</strong> via QRIS berhasil diverifikasi. Polis membership <strong>{selectedTier?.name}</strong> kini telah aktif.
           </p>
-          <p className="text-[11px] text-emerald-200">Mengarahkan Anda kembali ke Dashboard Barang Saya...</p>
+          <p className="text-[11px] text-emerald-200">Mengarahkan kembali ke Dashboard...</p>
         </div>
       )}
 
-      <Card className="grid md:grid-cols-2 gap-8 p-6 sm:p-8">
+      <Card className="grid md:grid-cols-2 gap-8 p-6 sm:p-8 border border-slate-200/80 rounded-3xl shadow-lg">
         {/* Kolom Kiri: Ringkasan Pesanan & Pilihan Paket */}
         <div className="space-y-6 border-b md:border-b-0 md:border-r border-slate-200 pb-6 md:pb-0 md:pr-6">
           <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ringkasan Pembayaran</span>
-            <h1 className="text-xl font-bold text-slate-900 mt-1">Pembelian Membership Proteksi</h1>
+            <span className="text-[10px] font-extrabold text-indigo-600 uppercase tracking-wider">Checkout Membership</span>
+            <h1 className="text-xl font-extrabold text-slate-900 mt-1">Proteksi Garansi Resmi</h1>
           </div>
 
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
             <div className="flex justify-between text-xs">
-              <span className="text-slate-600">Barang Terproteksi:</span>
+              <span className="text-slate-500">Barang Terproteksi:</span>
               <span className="font-bold text-slate-900">{item?.brand} {item?.model}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-slate-600">Kategori:</span>
+              <span className="text-slate-500">Kategori:</span>
               <span className="font-semibold text-slate-800">{item?.subcategories?.name}</span>
             </div>
-            <div className="flex justify-between text-xs pt-1 border-t border-slate-200">
-              <span className="text-slate-600 flex items-center gap-1">
-                <ShoppingBag className="w-3.5 h-3.5 text-primary-600" />
+            <div className="flex justify-between text-xs pt-2 border-t border-slate-200">
+              <span className="text-slate-500 flex items-center gap-1">
+                <ShoppingBag className="w-3.5 h-3.5 text-indigo-600" />
                 Toko Pembelian:
               </span>
-              <span className="font-bold text-primary-800">{item?.purchase_channel || 'Toko Resmi / Direct'}</span>
+              <span className="font-bold text-indigo-700">{item?.purchase_channel || 'Toko Resmi / Direct'}</span>
             </div>
           </div>
 
@@ -163,13 +163,13 @@ function CheckoutContent() {
                     key={tier.id}
                     onClick={() => setSelectedTier(tier)}
                     className={cn(
-                      'p-3.5 rounded-xl border cursor-pointer transition space-y-1',
-                      isSelected ? 'border-primary-600 bg-primary-50/50 ring-1 ring-primary-600' : 'border-slate-200 hover:border-slate-300 bg-white'
+                      'p-3.5 rounded-2xl border cursor-pointer transition space-y-1',
+                      isSelected ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-600' : 'border-slate-200 hover:border-slate-300 bg-white'
                     )}
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-2">
-                        <input type="radio" name="membershipTier" checked={isSelected} onChange={() => setSelectedTier(tier)} className="text-primary-600 focus:ring-primary-500" />
+                        <input type="radio" name="membershipTier" checked={isSelected} onChange={() => setSelectedTier(tier)} className="text-indigo-600 focus:ring-indigo-500" />
                         <span className="font-bold text-xs text-slate-900">{tier.name}</span>
                       </div>
                       <span className="text-xs font-extrabold text-slate-900">{formatIDR(tier.price)}</span>
@@ -177,13 +177,13 @@ function CheckoutContent() {
 
                     <div className="flex flex-wrap items-center gap-2 pl-6 text-[10px]">
                       {tier.bonus_months > 0 && (
-                        <span className="bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                        <span className="bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                           <Gift className="w-3 h-3 text-purple-600" />
                           Bonus +{tier.bonus_months} Bulan
                         </span>
                       )}
                       {tier.discount_percentage > 0 && (
-                        <span className="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">
+                        <span className="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
                           Diskon {formatIndoDecimal(tier.discount_percentage)}%
                         </span>
                       )}
@@ -200,88 +200,72 @@ function CheckoutContent() {
               <span>{formatIDR(planPrice)}</span>
             </div>
             <div className="flex justify-between text-slate-600">
-              <span>Biaya Penanganan / Admin</span>
+              <span>Biaya Admin</span>
               <span>{formatIDR(adminFee)}</span>
             </div>
-            <div className="flex justify-between font-bold text-sm text-slate-900 border-t border-slate-200 pt-2">
+            <div className="flex justify-between font-extrabold text-sm text-slate-900 border-t border-slate-200 pt-2">
               <span>Total Pembayaran</span>
-              <span className="text-primary-700">{formatIDR(totalPrice)}</span>
+              <span className="text-indigo-600">{formatIDR(totalPrice)}</span>
             </div>
-          </div>
-
-          <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 text-[11px] rounded-xl space-y-1">
-            <div className="flex items-center gap-1.5 font-bold">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-              Catatan Transparansi Layanan
-            </div>
-            <p className="leading-relaxed text-amber-800">
-              Cakupan membership berupa <strong>jasa perbaikan &amp; perawatan fisik</strong>, bukan penggantian uang tunai atau klaim asuransi murni. Masa tunggu klaim berlaku 14 hari sejak pembayaran dikonfirmasi.
-            </p>
           </div>
         </div>
 
-        {/* Kolom Kanan: Metode Pembayaran & Auto-Paid Action */}
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-base font-bold text-slate-900">Pilih Metode Pembayaran</h2>
-            <p className="text-xs text-slate-500">Auto-Paid Instant Enabled</p>
-          </div>
-
-          {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">
-              {error}
+        {/* Kolom Kanan: QRIS ONLY PAYMENT SECTION */}
+        <div className="space-y-6 flex flex-col justify-between">
+          <div className="space-y-4">
+            <div>
+              <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                Metode Tunggal Pembayaran
+              </span>
+              <h2 className="text-lg font-extrabold text-slate-900 mt-1">Pembayaran QRIS Instant</h2>
+              <p className="text-xs text-slate-500">Pindai menggunakan aplikasi E-Wallet atau Mobile Banking pilihan Anda.</p>
             </div>
-          )}
+
+            {error && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl">
+                {error}
+              </div>
+            )}
+
+            {/* QRIS Card Display Box */}
+            <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl text-center space-y-4 shadow-inner">
+              <div className="inline-flex items-center justify-center p-3 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                <QrCode className="w-32 h-32 text-slate-900" />
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-xs font-extrabold text-slate-900 block">QRIS - Quick Response Code Indonesian Standard</span>
+                <p className="text-[11px] text-slate-500">Mendukung GoPay, OVO, ShopeePay, DANA, BCA, Mandiri, BNI, BRI &amp; LinkAja</p>
+              </div>
+
+              <div className="flex flex-wrap justify-center items-center gap-2 pt-2 border-t border-slate-200/80 text-[10px] font-extrabold text-slate-600">
+                <span className="px-2 py-0.5 bg-white rounded border border-slate-200">GOPAY</span>
+                <span className="px-2 py-0.5 bg-white rounded border border-slate-200">OVO</span>
+                <span className="px-2 py-0.5 bg-white rounded border border-slate-200">DANA</span>
+                <span className="px-2 py-0.5 bg-white rounded border border-slate-200">SHOPEEPAY</span>
+                <span className="px-2 py-0.5 bg-white rounded border border-slate-200">BCA</span>
+                <span className="px-2 py-0.5 bg-white rounded border border-slate-200">LIVIN</span>
+              </div>
+            </div>
+          </div>
 
           <div className="space-y-3">
-            {[
-              { value: 'qris', icon: QrCode, title: 'QRIS Instant Auto-Paid', desc: 'Konfirmasi pembayaran otomatis seketika', tag: 'Rekomendasi' },
-              { value: 'va', icon: Building2, title: 'Virtual Account Bank', desc: 'BCA, Mandiri, BNI, BRI, Permata' },
-              { value: 'card', icon: CreditCard, title: 'Kartu Kredit / Debit', desc: 'Visa & Mastercard' },
-            ].map((method) => (
-              <label
-                key={method.value}
-                className={cn(
-                  'p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition',
-                  paymentMethod === method.value ? 'border-primary-600 bg-primary-50/40 ring-1 ring-primary-600' : 'border-slate-200 hover:border-slate-300'
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value={method.value}
-                    checked={paymentMethod === method.value}
-                    onChange={() => setPaymentMethod(method.value)}
-                    className="text-primary-600 focus:ring-primary-500"
-                  />
-                  <div className="flex items-center gap-2">
-                    <method.icon className="w-5 h-5 text-slate-700" />
-                    <div>
-                      <span className="block text-xs font-bold text-slate-900">{method.title}</span>
-                      <span className="text-[10px] text-slate-500">{method.desc}</span>
-                    </div>
-                  </div>
-                </div>
-                {method.tag && <span className="text-[10px] bg-primary-100 text-primary-800 font-bold px-2 py-0.5 rounded">{method.tag}</span>}
-              </label>
-            ))}
-          </div>
+            <Button
+              fullWidth
+              size="lg"
+              variant="primary"
+              loading={processing}
+              disabled={paidSuccess}
+              onClick={handlePayNow}
+              icon={<Zap className="w-4 h-4" />}
+            >
+              {processing ? 'Memproses QRIS Auto-Paid...' : `Bayar ${formatIDR(totalPrice)} (QRIS Auto-Paid)`}
+            </Button>
 
-          <Button
-            fullWidth
-            size="lg"
-            variant="secondary"
-            loading={processing}
-            disabled={paidSuccess}
-            onClick={handlePayNow}
-          >
-            {processing ? 'Memproses Auto-Paid...' : `Bayar ${formatIDR(totalPrice)} (Auto-Paid)`}
-          </Button>
-
-          <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
-            <Lock className="w-3.5 h-3.5 text-primary-600" />
-            <span>Auto-Paid Instant Enabled - Xendit Gateway</span>
+            <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+              <Lock className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Verified QRIS Payment Gateway &bull; Xendit Infrastructure</span>
+            </div>
           </div>
         </div>
       </Card>

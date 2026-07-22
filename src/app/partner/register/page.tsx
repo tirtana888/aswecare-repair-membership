@@ -470,12 +470,12 @@ export default function PartnerRegisterPage() {
                     onClick={() => handleSubmit('send_link')}
                     className="p-5 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 rounded-xl text-left transition-colors flex items-start gap-4 disabled:opacity-50"
                   >
-                    <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center flex-shrink-0">
-                      <Send className="w-5 h-5" />
+                    <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 font-bold text-xs">
+                      QRIS
                     </div>
                     <div>
-                      <h3 className="font-semibold text-emerald-900">Kirim Link ke Customer</h3>
-                      <p className="text-sm text-emerald-700/80 mt-1">Customer membayar sendiri via link yang dikirim ke email.</p>
+                      <h3 className="font-semibold text-emerald-900">QRIS / Link Pembayaran Customer</h3>
+                      <p className="text-sm text-emerald-700/80 mt-1">Tunjukkan kode QRIS ke customer di kasir atau kirimkan link bayar via WhatsApp/email.</p>
                     </div>
                   </button>
                 </div>
