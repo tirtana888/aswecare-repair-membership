@@ -30,31 +30,45 @@ function CheckoutContent() {
   }, [itemId, tierId])
 
   const fetchData = async () => {
-    const { data: tiers } = await supabase
-      .from('membership_tiers')
-      .select('*')
-      .eq('is_active', true)
-      .order('duration_months')
-
-    if (tiers && tiers.length > 0) {
-      setMembershipTiers(tiers)
-      const target = tierId ? tiers.find((t) => t.id === tierId) : null
-      setSelectedTier(target || tiers[0])
-    }
-
+    let itemData: any = null
     if (itemId) {
       const { data, error } = await supabase
         .from('items')
-        .select('*, subcategories(name)')
+        .select('*, subcategories(name, category_id, categories(name))')
         .eq('id', itemId)
         .single()
 
       if (error || !data) {
         setError('Item tidak ditemukan.')
       } else {
+        itemData = data
         setItem(data)
       }
     }
+
+    const { data: tiers } = await supabase
+      .from('membership_tiers')
+      .select('*, categories(name), subcategories(name)')
+      .eq('is_active', true)
+      .order('duration_months')
+
+    if (tiers && tiers.length > 0) {
+      const itemSubcatId = itemData?.subcategory_id
+      const itemCatId = itemData?.subcategories?.category_id
+
+      // Filter tiers dynamically matching item subcategory OR category OR global
+      const matchingTiers = tiers.filter((t) => {
+        if (t.subcategory_id && itemSubcatId) return t.subcategory_id === itemSubcatId
+        if (t.category_id && itemCatId) return t.category_id === itemCatId
+        return !t.subcategory_id && !t.category_id
+      })
+
+      const finalTiers = matchingTiers.length > 0 ? matchingTiers : tiers
+      setMembershipTiers(finalTiers)
+      const target = tierId ? finalTiers.find((t) => t.id === tierId) : null
+      setSelectedTier(target || finalTiers[0])
+    }
+
     setLoading(false)
   }
 
@@ -146,8 +160,10 @@ function CheckoutContent() {
               <span className="font-bold text-slate-900">{item?.brand} {item?.model}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-slate-500">Kategori:</span>
-              <span className="font-semibold text-slate-800">{item?.subcategories?.name}</span>
+              <span className="text-slate-500">Kategori &amp; Subkategori:</span>
+              <span className="font-semibold text-indigo-900 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                {item?.subcategories?.categories?.name ? `${item.subcategories.categories.name} • ${item.subcategories.name}` : item?.subcategories?.name || 'Kategori'}
+              </span>
             </div>
             <div className="flex justify-between text-xs pt-2 border-t border-slate-200">
               <span className="text-slate-500 flex items-center gap-1">
