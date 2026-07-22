@@ -3,18 +3,22 @@
 import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Lock, ArrowLeft, QrCode, Gift, ShoppingBag, AlertCircle, CheckCircle2, ShieldCheck, Zap } from 'lucide-react'
+import { Lock, ArrowLeft, QrCode, Gift, ShoppingBag, AlertCircle, CheckCircle2, ShieldCheck, Zap, Percent } from 'lucide-react'
 import { Card, Button } from '@/components/ui'
 import { cn, formatIDR } from '@/lib/utils'
 
 function CheckoutContent() {
-  const searchParams = useSearchParams()
+  const searchParams = searchParamsHook()
   const itemId = searchParams.get('itemId')
+
+  function searchParamsHook() {
+    return useSearchParams()
+  }
 
   const [item, setItem] = useState<any>(null)
   const [membershipTiers, setMembershipTiers] = useState<any[]>([])
   const [selectedTier, setSelectedTier] = useState<any>(null)
-  const [paymentMethod] = useState('qris') // QRIS ONLY
+  const [paymentMethod] = useState('qris') // QRIS BI ONLY (0.7% MDR)
 
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
@@ -63,8 +67,10 @@ function CheckoutContent() {
   }
 
   const planPrice = selectedTier ? parseFloat(selectedTier.price) : 120000
-  const adminFee = selectedTier ? parseFloat(selectedTier.admin_fee) : 5000
-  const totalPrice = planPrice + adminFee
+  
+  // Official Bank Indonesia & ASPI QRIS Standard MDR Rate: 0.7%
+  const qrisMdrFee = Math.round(planPrice * 0.007)
+  const totalPrice = planPrice + qrisMdrFee
 
   const handlePayNow = async () => {
     setProcessing(true)
@@ -82,13 +88,14 @@ function CheckoutContent() {
           bonusMonths: selectedTier?.bonus_months || 0,
           bonusQuota: selectedTier?.bonus_quota || 0,
           amount: totalPrice,
-          paymentMethod: 'qris',
+          qrisFee: qrisMdrFee,
+          paymentMethod: 'qris_bi_0.7',
         }),
       })
 
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.message || 'Gagal memproses pembayaran QRIS')
+        throw new Error(data.message || 'Gagal memproses pembayaran QRIS BI')
       }
 
       setPaidSuccess(true)
@@ -118,10 +125,10 @@ function CheckoutContent() {
         <div className="p-6 bg-emerald-600 text-white rounded-3xl shadow-xl space-y-3">
           <div className="flex items-center gap-2 font-bold text-lg">
             <CheckCircle2 className="w-6 h-6 text-white" />
-            <span>Pembayaran QRIS Lunas Instan!</span>
+            <span>Pembayaran QRIS BI Lunas Instan!</span>
           </div>
           <p className="text-xs text-emerald-100 leading-relaxed">
-            Pembayaran sebesar <strong>{formatIDR(totalPrice)}</strong> via QRIS berhasil diverifikasi. Polis membership <strong>{selectedTier?.name}</strong> kini telah aktif.
+            Pembayaran sebesar <strong>{formatIDR(totalPrice)}</strong> via QRIS Standar Bank Indonesia (MDR 0,7%) berhasil dikonfirmasi. Polis membership <strong>{selectedTier?.name}</strong> kini telah aktif.
           </p>
           <p className="text-[11px] text-emerald-200">Mengarahkan kembali ke Dashboard...</p>
         </div>
@@ -199,9 +206,12 @@ function CheckoutContent() {
               <span>Harga Paket ({selectedTier?.name})</span>
               <span>{formatIDR(planPrice)}</span>
             </div>
-            <div className="flex justify-between text-slate-600">
-              <span>Biaya Admin</span>
-              <span>{formatIDR(adminFee)}</span>
+            <div className="flex justify-between text-emerald-700 font-semibold">
+              <span className="flex items-center gap-1">
+                <span>Biaya Transaksi QRIS BI (0.7%)</span>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">Resmi BI</span>
+              </span>
+              <span>{formatIDR(qrisMdrFee)}</span>
             </div>
             <div className="flex justify-between font-extrabold text-sm text-slate-900 border-t border-slate-200 pt-2">
               <span>Total Pembayaran</span>
@@ -210,15 +220,17 @@ function CheckoutContent() {
           </div>
         </div>
 
-        {/* Kolom Kanan: QRIS ONLY PAYMENT SECTION */}
+        {/* Kolom Kanan: QRIS STANDAR BANK INDONESIA (0.7% MDR) */}
         <div className="space-y-6 flex flex-col justify-between">
           <div className="space-y-4">
-            <div>
-              <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                Metode Tunggal Pembayaran
-              </span>
-              <h2 className="text-lg font-extrabold text-slate-900 mt-1">Pembayaran QRIS Instant</h2>
-              <p className="text-xs text-slate-500">Pindai menggunakan aplikasi E-Wallet atau Mobile Banking pilihan Anda.</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  Standar Resmi Bank Indonesia &amp; ASPI
+                </span>
+                <h2 className="text-lg font-extrabold text-slate-900 mt-1">QRIS BI (MDR 0,7%)</h2>
+                <p className="text-xs text-slate-500">Bukan biaya flat Rp 4.000. Hemat &amp; sesuai regulasi pemerintah.</p>
+              </div>
             </div>
 
             {error && (
@@ -227,7 +239,7 @@ function CheckoutContent() {
               </div>
             )}
 
-            {/* QRIS Card Display Box */}
+            {/* QRIS Display Box */}
             <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl text-center space-y-4 shadow-inner">
               <div className="inline-flex items-center justify-center p-3 bg-white border border-slate-200 rounded-2xl shadow-sm">
                 <QrCode className="w-32 h-32 text-slate-900" />
@@ -235,7 +247,7 @@ function CheckoutContent() {
 
               <div className="space-y-1">
                 <span className="text-xs font-extrabold text-slate-900 block">QRIS - Quick Response Code Indonesian Standard</span>
-                <p className="text-[11px] text-slate-500">Mendukung GoPay, OVO, ShopeePay, DANA, BCA, Mandiri, BNI, BRI &amp; LinkAja</p>
+                <p className="text-[11px] text-slate-500">MDR Resmi Pemerintah: 0,7% per transaksi (Bukan Rp 4.000)</p>
               </div>
 
               <div className="flex flex-wrap justify-center items-center gap-2 pt-2 border-t border-slate-200/80 text-[10px] font-extrabold text-slate-600">
@@ -259,12 +271,12 @@ function CheckoutContent() {
               onClick={handlePayNow}
               icon={<Zap className="w-4 h-4" />}
             >
-              {processing ? 'Memproses QRIS Auto-Paid...' : `Bayar ${formatIDR(totalPrice)} (QRIS Auto-Paid)`}
+              {processing ? 'Memproses QRIS BI Auto-Paid...' : `Bayar ${formatIDR(totalPrice)} (QRIS BI Auto-Paid)`}
             </Button>
 
             <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
               <Lock className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Verified QRIS Payment Gateway &bull; Xendit Infrastructure</span>
+              <span>Standar QRIS Bank Indonesia &bull; MDR 0,7% Verified</span>
             </div>
           </div>
         </div>

@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(req: Request) {
   try {
-    const { itemId, planTier, durationMonths, bonusMonths, bonusQuota, amount, paymentMethod = 'qris' } = await req.json()
+    const { itemId, planTier, durationMonths, bonusMonths, bonusQuota, amount, qrisFee, paymentMethod = 'qris_bi_0.7' } = await req.json()
 
     if (!itemId) {
       return NextResponse.json({ message: 'itemId wajib diisi' }, { status: 400 })
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Barang tidak ditemukan' }, { status: 404 })
     }
 
-    const mockInvoiceId = `inv_qris_${Date.now()}_${Math.random().toString(36).substring(7)}`
+    const mockInvoiceId = `inv_qris_bi_${Date.now()}_${Math.random().toString(36).substring(7)}`
     
     // Dynamic quota calculation: default quota + bonus quota
     const baseQuota = item.subcategories?.default_annual_quota || 2
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const waitingPeriodEnd = new Date()
     waitingPeriodEnd.setDate(waitingPeriodEnd.getDate() + 14) // +14 days waiting period
 
-    // Upsert into plans table with QRIS payment method
+    // Upsert into plans table with QRIS Bank Indonesia 0.7% MDR Payment
     const { data: planData, error: planError } = await supabaseAdmin
       .from('plans')
       .upsert({
@@ -64,7 +64,9 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       plan: planData,
-      paymentMethod: 'qris',
+      paymentMethod: 'qris_bi_0.7',
+      mdrRate: '0.7%',
+      calculatedMdrFee: qrisFee || Math.round((amount || 120000) * 0.007),
       invoiceUrl: `https://checkout.xendit.co/web/${mockInvoiceId}`,
       invoiceId: mockInvoiceId,
     })
