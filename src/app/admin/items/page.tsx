@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
-import { Search, Camera, ShieldCheck, ChevronLeft, ChevronRight, User, Package, Calendar, Loader2 } from 'lucide-react'
+import { Search, Camera, ShieldCheck, ChevronLeft, ChevronRight, User, Package, Calendar, Loader2, FileText } from 'lucide-react'
 import { PageHeader, StatusBadge, Tabs, Input, Textarea, EmptyState } from '@/components/ui'
 import { formatDateID, formatIDR, cn } from '@/lib/utils'
 
