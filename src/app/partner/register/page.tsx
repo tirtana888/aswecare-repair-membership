@@ -56,22 +56,51 @@ export default function PartnerRegisterPage() {
   const [tiers, setTiers] = useState<any[]>([]);
   const [selectedTier, setSelectedTier] = useState<any>(null);
 
-  // Fetch initial data
+  // Fetch initial data & partner custom protection mapping
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch categories & subcategories
+      const { data: { user } } = await supabase.auth.getUser()
+      let partnerCustomTiers: string[] = []
+      let partnerCustomSubcats: string[] = []
+
+      if (user) {
+        const { data: partnerUser } = await supabase
+          .from('brand_partner_users')
+          .select('brand_partners(allowed_tier_ids, allowed_subcategory_ids)')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (partnerUser?.brand_partners) {
+          partnerCustomTiers = Array.isArray(partnerUser.brand_partners.allowed_tier_ids) ? partnerUser.brand_partners.allowed_tier_ids : []
+          partnerCustomSubcats = Array.isArray(partnerUser.brand_partners.allowed_subcategory_ids) ? partnerUser.brand_partners.allowed_subcategory_ids : []
+        }
+      }
+
       const [{ data: cats }, { data: subcats }, { data: tierData }] = await Promise.all([
         supabase.from('categories').select('*'),
         supabase.from('subcategories').select('*').eq('is_active', true),
         supabase.from('membership_tiers').select('*').eq('is_active', true).order('duration_months')
-      ]);
+      ])
       
-      if (cats) setCategories(cats);
-      if (subcats) setSubcategories(subcats);
-      if (tierData) setTiers(tierData);
-    };
-    fetchData();
-  }, [supabase]);
+      if (cats) setCategories(cats)
+      
+      if (subcats) {
+        const filteredSubcats = partnerCustomSubcats.length > 0
+          ? subcats.filter(sc => partnerCustomSubcats.includes(sc.id))
+          : subcats
+        setSubcategories(filteredSubcats)
+      }
+
+      if (tierData) {
+        const filteredTiers = partnerCustomTiers.length > 0
+          ? tierData.filter(t => partnerCustomTiers.includes(t.id))
+          : tierData
+        setTiers(filteredTiers)
+        if (filteredTiers.length > 0) setSelectedTier(filteredTiers[0])
+      }
+    }
+    fetchData()
+  }, [supabase])
 
   const addPhoto = () => {
     if (newPhotoUrl) {

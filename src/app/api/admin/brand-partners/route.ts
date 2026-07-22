@@ -4,23 +4,25 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export async function GET() {
   try {
     const supabaseAdmin = createAdminClient();
-    const { data: partners, error } = await supabaseAdmin
-      .from('brand_partners')
-      .select(`
-        *,
-        brand_partner_users(count),
-        members!members_referred_by_partner_id_fkey(count)
-      `)
-      .order('created_at', { ascending: false });
+    
+    // Fetch partners with count of users & members
+    const [
+      { data: partners, error },
+      { data: commissions },
+      { data: tiers },
+      { data: categories },
+      { data: subcategories }
+    ] = await Promise.all([
+      supabaseAdmin.from('brand_partners').select('*, brand_partner_users(count), members!members_referred_by_partner_id_fkey(count)').order('created_at', { ascending: false }),
+      supabaseAdmin.from('partner_commissions').select('brand_partner_id, gross_amount, partner_share, platform_share, payout_status'),
+      supabaseAdmin.from('membership_tiers').select('*').eq('is_active', true),
+      supabaseAdmin.from('categories').select('*'),
+      supabaseAdmin.from('subcategories').select('*').eq('is_active', true)
+    ]);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    // Also fetch aggregate commissions for each partner
-    const { data: commissions } = await supabaseAdmin
-      .from('partner_commissions')
-      .select('brand_partner_id, gross_amount, partner_share, platform_share, payout_status');
 
     const partnersWithFinancials = (partners || []).map((p: any) => {
       const pComms = (commissions || []).filter((c: any) => c.brand_partner_id === p.id);
@@ -38,7 +40,12 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(partnersWithFinancials);
+    return NextResponse.json({
+      partners: partnersWithFinancials,
+      availableTiers: tiers || [],
+      availableCategories: categories || [],
+      availableSubcategories: subcategories || []
+    });
   } catch (error: any) {
     return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
   }
@@ -55,18 +62,21 @@ export async function POST(request: Request) {
       address,
       categoryFocus,
       commissionRate = 10,
+      allowedTierIds = [],
+      allowedCategoryIds = [],
+      allowedSubcategoryIds = [],
       loginEmail,
       loginPassword,
       loginName
     } = body;
 
     if (!name || !loginEmail || !loginPassword || !loginName) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ error: 'Data wajib belum lengkap' }, { status: 400 });
     }
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 
-    // 1. Create brand_partners record
+    // 1. Create brand_partners record with custom protection tiers & subcategories
     const { data: partner, error: partnerError } = await supabaseAdmin
       .from('brand_partners')
       .insert({
@@ -77,13 +87,16 @@ export async function POST(request: Request) {
         address,
         category_focus: categoryFocus || 'all',
         commission_rate: parseFloat(commissionRate) || 10,
+        allowed_tier_ids: allowedTierIds,
+        allowed_category_ids: allowedCategoryIds,
+        allowed_subcategory_ids: allowedSubcategoryIds,
         is_active: true
       })
       .select()
       .single();
 
     if (partnerError) {
-      return NextResponse.json({ error: 'Failed to create brand partner', details: partnerError.message }, { status: 500 });
+      return NextResponse.json({ error: 'Gagal membuat partner baru: ' + partnerError.message }, { status: 500 });
     }
 
     // 2. Create auth user
@@ -96,12 +109,12 @@ export async function POST(request: Request) {
 
     if (authError) {
       await supabaseAdmin.from('brand_partners').delete().eq('id', partner.id);
-      return NextResponse.json({ error: 'Failed to create login user', details: authError.message }, { status: 500 });
+      return NextResponse.json({ error: 'Gagal membuat akun login: ' + authError.message }, { status: 500 });
     }
 
     const userId = authData?.user?.id;
     if (!userId) {
-      return NextResponse.json({ error: 'Failed to retrieve created user ID' }, { status: 500 });
+      return NextResponse.json({ error: 'Gagal mendapatkan User ID' }, { status: 500 });
     }
 
     // 3. Create brand_partner_users record
@@ -116,7 +129,7 @@ export async function POST(request: Request) {
       });
 
     if (linkError) {
-      return NextResponse.json({ error: 'Failed to link user to partner', details: linkError.message }, { status: 500 });
+      return NextResponse.json({ error: 'Gagal menghubungkan user dengan partner', details: linkError.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, partner });
@@ -129,7 +142,7 @@ export async function PATCH(request: Request) {
   try {
     const supabaseAdmin = createAdminClient();
     const body = await request.json();
-    const { id, commission_rate, is_active } = body;
+    const { id, commission_rate, allowed_tier_ids, allowed_category_ids, allowed_subcategory_ids, is_active } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'Partner ID is required' }, { status: 400 });
@@ -137,6 +150,9 @@ export async function PATCH(request: Request) {
 
     const updateFields: any = {};
     if (commission_rate !== undefined) updateFields.commission_rate = parseFloat(commission_rate);
+    if (allowed_tier_ids !== undefined) updateFields.allowed_tier_ids = allowed_tier_ids;
+    if (allowed_category_ids !== undefined) updateFields.allowed_category_ids = allowed_category_ids;
+    if (allowed_subcategory_ids !== undefined) updateFields.allowed_subcategory_ids = allowed_subcategory_ids;
     if (is_active !== undefined) updateFields.is_active = is_active;
 
     const { data: updated, error } = await supabaseAdmin
