@@ -236,6 +236,9 @@ function ClaimFormContent() {
       return
     }
 
+    // Automatically increment plan quota_used
+    await supabase.from('plans').update({ quota_used: (activePlan.quota_used || 0) + 1 }).eq('id', activePlan.id)
+
     router.push('/dashboard/claims')
     router.refresh()
   }

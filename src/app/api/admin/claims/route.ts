@@ -49,10 +49,29 @@ export async function PATCH(req: Request) {
       updatePayload.resolved_at = new Date().toISOString()
     }
 
-    const { error } = await supabaseAdmin.from('claims').update(updatePayload).eq('id', claimId)
+    const { data: updatedClaim, error } = await supabaseAdmin
+      .from('claims')
+      .update(updatePayload)
+      .eq('id', claimId)
+      .select('plan_id')
+      .single()
 
     if (error) {
       return NextResponse.json({ message: error.message }, { status: 500 })
+    }
+
+    // Automatically sync quota_used on the plan table
+    if (updatedClaim?.plan_id) {
+      const { count } = await supabaseAdmin
+        .from('claims')
+        .select('*', { count: 'exact', head: true })
+        .eq('plan_id', updatedClaim.plan_id)
+        .in('status', ['submitted', 'approved', 'in_service', 'completed', 'delivered'])
+
+      await supabaseAdmin
+        .from('plans')
+        .update({ quota_used: count || 0 })
+        .eq('id', updatedClaim.plan_id)
     }
 
     return NextResponse.json({ success: true })
