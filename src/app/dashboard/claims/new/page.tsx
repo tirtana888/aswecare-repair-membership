@@ -155,21 +155,27 @@ function ClaimFormContent() {
   }, [itemId])
 
   const fetchItemDetails = async () => {
-    const { data, error } = await supabase
+    const { data: itemData, error } = await supabase
       .from('items')
-      .select(`
-        *,
-        subcategories (*, categories(name)),
-        plans (*)
-      `)
+      .select('*, subcategories (*, categories(name))')
       .eq('id', itemId)
       .single()
 
-    if (error || !data) {
+    if (error || !itemData) {
       setError('Barang tidak ditemukan.')
     } else {
-      setItem(data)
-      const options = getDamageOptions(data)
+      const { data: plansData } = await supabase
+        .from('plans')
+        .select('*')
+        .eq('item_id', itemId)
+
+      const mergedItem = {
+        ...itemData,
+        plans: plansData || []
+      }
+
+      setItem(mergedItem)
+      const options = getDamageOptions(mergedItem)
       setDamageType(options[0])
     }
     setLoading(false)
@@ -187,7 +193,7 @@ function ClaimFormContent() {
     setSubmitting(true)
     setError(null)
 
-    const activePlan = item?.plans && item.plans.length > 0 ? item.plans[0] : null
+    const activePlan = item?.plans?.find((p: any) => p.status === 'active') || (item?.plans && item.plans.length > 0 ? item.plans[0] : null)
 
     if (!activePlan || activePlan.status !== 'active') {
       setError('Barang ini belum memiliki plan membership aktif.')
