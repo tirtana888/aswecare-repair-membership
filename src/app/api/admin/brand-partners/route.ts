@@ -13,7 +13,7 @@ export async function GET() {
       { data: categories },
       { data: subcategories }
     ] = await Promise.all([
-      supabaseAdmin.from('brand_partners').select('*, brand_partner_users(count), members!members_referred_by_partner_id_fkey(count)').order('created_at', { ascending: false }),
+      supabaseAdmin.from('brand_partners').select('*, brand_partner_users(*), members!members_referred_by_partner_id_fkey(count)').order('created_at', { ascending: false }),
       supabaseAdmin.from('partner_commissions').select('brand_partner_id, gross_amount, partner_share, platform_share, payout_status'),
       supabaseAdmin.from('membership_tiers').select('*').eq('is_active', true),
       supabaseAdmin.from('categories').select('*'),
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 
-    // 1. Create brand_partners record with custom protection tiers & subcategories
+    // 1. Create brand_partners record
     const { data: partner, error: partnerError } = await supabaseAdmin
       .from('brand_partners')
       .insert({
@@ -142,13 +142,30 @@ export async function PATCH(request: Request) {
   try {
     const supabaseAdmin = createAdminClient();
     const body = await request.json();
-    const { id, commission_rate, allowed_tier_ids, allowed_category_ids, allowed_subcategory_ids, is_active } = body;
+    const {
+      id,
+      name,
+      contact_email,
+      contact_phone,
+      address,
+      category_focus,
+      commission_rate,
+      allowed_tier_ids,
+      allowed_category_ids,
+      allowed_subcategory_ids,
+      is_active
+    } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'Partner ID is required' }, { status: 400 });
     }
 
     const updateFields: any = {};
+    if (name !== undefined) updateFields.name = name;
+    if (contact_email !== undefined) updateFields.contact_email = contact_email;
+    if (contact_phone !== undefined) updateFields.contact_phone = contact_phone;
+    if (address !== undefined) updateFields.address = address;
+    if (category_focus !== undefined) updateFields.category_focus = category_focus;
     if (commission_rate !== undefined) updateFields.commission_rate = parseFloat(commission_rate);
     if (allowed_tier_ids !== undefined) updateFields.allowed_tier_ids = allowed_tier_ids;
     if (allowed_category_ids !== undefined) updateFields.allowed_category_ids = allowed_category_ids;
@@ -167,6 +184,42 @@ export async function PATCH(request: Request) {
     }
 
     return NextResponse.json({ success: true, partner: updated });
+  } catch (error: any) {
+    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const supabaseAdmin = createAdminClient();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'Partner ID is required' }, { status: 400 });
+    }
+
+    // 1. Delete associated partner users
+    const { data: partnerUsers } = await supabaseAdmin
+      .from('brand_partner_users')
+      .select('id')
+      .eq('brand_partner_id', id);
+
+    if (partnerUsers && partnerUsers.length > 0) {
+      for (const pu of partnerUsers) {
+        await supabaseAdmin.auth.admin.deleteUser(pu.id).catch(() => null);
+      }
+      await supabaseAdmin.from('brand_partner_users').delete().eq('brand_partner_id', id);
+    }
+
+    // 2. Delete brand_partner record
+    const { error } = await supabaseAdmin.from('brand_partners').delete().eq('id', id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: 'Brand Partner berhasil dihapus' });
   } catch (error: any) {
     return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
   }
