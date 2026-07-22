@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Plus, Power, PowerOff, Save, Clock, Zap } from 'lucide-react'
 import { PageHeader, Card, CardHeader, CardBody, Button, FormField, Input, Select, EmptyState, useToast } from '@/components/ui'
 import { formatIDR, cn } from '@/lib/utils'
@@ -22,7 +21,6 @@ interface Tier {
 }
 
 export default function PricingPage() {
-  const supabase = createClient()
   const toast = useToast()
   const [tiers, setTiers] = useState<Tier[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,8 +37,15 @@ export default function PricingPage() {
 
   const fetchTiers = async () => {
     setLoading(true)
-    const { data } = await supabase.from('membership_tiers').select('*').order('created_at', { ascending: false })
-    if (data) setTiers(data)
+    try {
+      const res = await fetch('/api/admin/pricing')
+      if (res.ok) {
+        const data = await res.json()
+        if (Array.isArray(data)) setTiers(data)
+      }
+    } catch (err) {
+      console.error(err)
+    }
     setLoading(false)
   }
 
@@ -51,29 +56,48 @@ export default function PricingPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-    const { error } = await supabase.from('membership_tiers').insert([{
-      ...formData,
-      discount_percentage: discountPercentage,
-      is_active: true,
-    }])
-    setSaving(false)
-    if (!error) {
-      fetchTiers()
-      setFormData({ name: '', plan_tier: 'basic', duration_months: 12, bonus_months: 0, bonus_quota: 0, waiting_period_days: 14, original_price: 0, price: 0, admin_fee: 0 })
-      toast.success('Paket harga baru berhasil disimpan!')
-    } else {
-      toast.error('Gagal menyimpan paket harga: ' + error.message)
+    try {
+      const res = await fetch('/api/admin/pricing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          discount_percentage: discountPercentage,
+        }),
+      })
+
+      const data = await res.json()
+      if (res.ok && data.success) {
+        fetchTiers()
+        setFormData({ name: '', plan_tier: 'basic', duration_months: 12, bonus_months: 0, bonus_quota: 0, waiting_period_days: 14, original_price: 0, price: 0, admin_fee: 0 })
+        toast.success('Paket harga baru berhasil disimpan!')
+      } else {
+        toast.error(data.message || 'Gagal menyimpan paket harga')
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal menyimpan paket harga')
+    } finally {
+      setSaving(false)
     }
   }
 
   const toggleActive = async (id: string, currentStatus: boolean) => {
-    const { error } = await supabase.from('membership_tiers').update({ is_active: !currentStatus }).eq('id', id)
-    if (error) {
+    try {
+      const res = await fetch('/api/admin/pricing', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, is_active: !currentStatus }),
+      })
+
+      if (res.ok) {
+        fetchTiers()
+        toast.success(currentStatus ? 'Paket dinonaktifkan' : 'Paket diaktifkan')
+      } else {
+        toast.error('Gagal mengubah status paket')
+      }
+    } catch (err) {
       toast.error('Gagal mengubah status paket')
-      return
     }
-    fetchTiers()
-    toast.success(currentStatus ? 'Paket dinonaktifkan' : 'Paket diaktifkan')
   }
 
   const formatPercent = (val: number) => new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val) + '%'
@@ -165,7 +189,7 @@ export default function PricingPage() {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-52 rounded- card bg-slate-100 animate-pulse" />
+            <div key={i} className="h-52 rounded-card bg-slate-100 animate-pulse" />
           ))}
         </div>
       ) : tiers.length === 0 ? (
