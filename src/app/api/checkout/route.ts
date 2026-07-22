@@ -70,6 +70,22 @@ export async function POST(req: Request) {
     }
 
     // Dynamic quota & dates calculation
+    const { tierId, waitingPeriodDays } = await req.json().catch(() => ({}))
+    
+    let daysToWait = typeof waitingPeriodDays === 'number' ? waitingPeriodDays : 14
+
+    if (tierId && daysToWait === 14) {
+      const { data: tierData } = await supabaseAdmin
+        .from('membership_tiers')
+        .select('waiting_period_days')
+        .eq('id', tierId)
+        .maybeSingle()
+
+      if (tierData && typeof tierData.waiting_period_days === 'number') {
+        daysToWait = tierData.waiting_period_days
+      }
+    }
+
     const baseQuota = item.subcategories?.default_annual_quota || 2
     const totalQuota = baseQuota + (bonusQuota || 0)
     const totalMonths = (durationMonths || 3) + (bonusMonths || 0)
@@ -78,7 +94,7 @@ export async function POST(req: Request) {
     endDate.setMonth(endDate.getMonth() + totalMonths)
 
     const waitingPeriodEnd = new Date()
-    waitingPeriodEnd.setDate(waitingPeriodEnd.getDate() + 14)
+    waitingPeriodEnd.setDate(waitingPeriodEnd.getDate() + daysToWait)
 
     // Upsert into plans table
     const { data: planData, error: planError } = await supabaseAdmin

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Power, PowerOff, Save } from 'lucide-react'
+import { Plus, Power, PowerOff, Save, Clock, Zap } from 'lucide-react'
 import { PageHeader, Card, CardHeader, CardBody, Button, FormField, Input, Select, EmptyState, useToast } from '@/components/ui'
 import { formatIDR, cn } from '@/lib/utils'
 
@@ -13,6 +13,7 @@ interface Tier {
   duration_months: number
   bonus_months: number
   bonus_quota: number
+  waiting_period_days: number
   original_price: number
   price: number
   discount_percentage: number
@@ -29,7 +30,7 @@ export default function PricingPage() {
 
   const [formData, setFormData] = useState({
     name: '', plan_tier: 'basic', duration_months: 12, bonus_months: 0,
-    bonus_quota: 0, original_price: 0, price: 0, admin_fee: 0,
+    bonus_quota: 0, waiting_period_days: 14, original_price: 0, price: 0, admin_fee: 0,
   })
 
   useEffect(() => {
@@ -58,10 +59,10 @@ export default function PricingPage() {
     setSaving(false)
     if (!error) {
       fetchTiers()
-      setFormData({ name: '', plan_tier: 'basic', duration_months: 12, bonus_months: 0, bonus_quota: 0, original_price: 0, price: 0, admin_fee: 0 })
-      toast.success('Paket harga baru berhasil disimpan')
+      setFormData({ name: '', plan_tier: 'basic', duration_months: 12, bonus_months: 0, bonus_quota: 0, waiting_period_days: 14, original_price: 0, price: 0, admin_fee: 0 })
+      toast.success('Paket harga baru berhasil disimpan!')
     } else {
-      toast.error('Gagal menyimpan paket harga')
+      toast.error('Gagal menyimpan paket harga: ' + error.message)
     }
   }
 
@@ -79,12 +80,12 @@ export default function PricingPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Paket & Harga" description="Atur harga paket proteksi, diskon, dan biaya admin." />
+      <PageHeader title="Paket &amp; Harga (Mekanisme Masa Tenggang)" description="Atur harga paket proteksi, diskon, biaya admin, serta pilihan masa tenggang (waiting period) yang customizable." />
 
-      <Card>
+      <Card className="border border-slate-200 shadow-sm rounded-2xl">
         <CardHeader>
           <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-            <Plus className="w-4 h-4 text-primary-600" /> Buat Paket Baru
+            <Plus className="w-4 h-4 text-indigo-600" /> Buat Paket Baru dengan Custom Masa Tenggang
           </h2>
         </CardHeader>
         <CardBody>
@@ -94,7 +95,7 @@ export default function PricingPage() {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Contoh: Paket Basic 12 Bulan"
+                placeholder="Contoh: Paket Basic 12 Bulan (Tanpa Masa Tunggu)"
               />
             </FormField>
 
@@ -111,6 +112,18 @@ export default function PricingPage() {
                 <option value={6}>6 Bulan</option>
                 <option value={9}>9 Bulan</option>
                 <option value={12}>12 Bulan</option>
+              </Select>
+            </FormField>
+
+            <FormField label="Masa Tenggang (Waiting Period)">
+              <Select
+                value={formData.waiting_period_days}
+                onChange={(e) => setFormData({ ...formData, waiting_period_days: Number(e.target.value) })}
+              >
+                <option value={0}>0 Hari (Tanpa Masa Tunggu / Instant)</option>
+                <option value={7}>7 Hari</option>
+                <option value={14}>14 Hari (Standar BI)</option>
+                <option value={30}>30 Hari</option>
               </Select>
             </FormField>
 
@@ -142,7 +155,7 @@ export default function PricingPage() {
 
             <div className="col-span-full mt-1">
               <Button type="submit" loading={saving} icon={<Save className="w-4 h-4" />}>
-                Simpan Paket
+                Simpan Paket Baru
               </Button>
             </div>
           </form>
@@ -152,7 +165,7 @@ export default function PricingPage() {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-52 rounded-card bg-slate-100 animate-pulse" />
+            <div key={i} className="h-52 rounded- card bg-slate-100 animate-pulse" />
           ))}
         </div>
       ) : tiers.length === 0 ? (
@@ -160,17 +173,40 @@ export default function PricingPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tiers.map((tier) => (
-            <Card key={tier.id} hover className={cn('p-5', !tier.is_active && 'opacity-60')}>
+            <Card key={tier.id} hover className={cn('p-5 border border-slate-200/80 rounded-2xl shadow-xs', !tier.is_active && 'opacity-60')}>
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <span
-                    className={cn(
-                      'text-[11px] font-bold px-2 py-1 rounded-full uppercase',
-                      tier.plan_tier === 'basic' ? 'bg-primary-50 text-primary-700' : 'bg-purple-50 text-purple-700'
-                    )}
-                  >
-                    {tier.plan_tier}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={cn(
+                        'text-[11px] font-bold px-2 py-0.5 rounded-full uppercase',
+                        tier.plan_tier === 'basic' ? 'bg-indigo-50 text-indigo-700' : 'bg-purple-50 text-purple-700'
+                      )}
+                    >
+                      {tier.plan_tier}
+                    </span>
+
+                    {/* Masa Tenggang Badge */}
+                    <span className={cn(
+                      "text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border",
+                      (tier.waiting_period_days || 14) === 0
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-amber-50 text-amber-800 border-amber-200"
+                    )}>
+                      {(tier.waiting_period_days || 14) === 0 ? (
+                        <>
+                          <Zap className="w-3 h-3 text-emerald-600" />
+                          <span>0 Hari (Instant)</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3 h-3 text-amber-600" />
+                          <span>Masa Tunggu {tier.waiting_period_days || 14} Hari</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
+
                   <h3 className="text-base font-bold text-slate-900 mt-2">{tier.name}</h3>
                   <p className="text-xs text-slate-500">
                     {tier.duration_months} Bulan {tier.bonus_months > 0 && `+ ${tier.bonus_months} Bln`}
@@ -208,9 +244,12 @@ export default function PricingPage() {
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-slate-100">
-                <span className="bg-slate-100 text-slate-700 text-xs font-semibold px-2 py-1 rounded-md">
+              <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
+                <span className="bg-slate-100 text-slate-700 font-semibold px-2.5 py-1 rounded-md">
                   Kuota Bonus: {tier.bonus_quota}x
+                </span>
+                <span className="text-slate-500 font-medium">
+                  Tenggang: <strong className="text-slate-800">{tier.waiting_period_days || 14} Hari</strong>
                 </span>
               </div>
             </Card>

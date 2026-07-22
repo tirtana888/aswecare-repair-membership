@@ -183,6 +183,26 @@ function CheckoutContent() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 pl-6 text-[10px]">
+                      {/* Masa Tenggang Badge */}
+                      <span className={cn(
+                        "font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border",
+                        (tier.waiting_period_days || 14) === 0
+                          ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                          : "bg-amber-100 text-amber-800 border-amber-200"
+                      )}>
+                        {(tier.waiting_period_days || 14) === 0 ? (
+                          <>
+                            <Zap className="w-3 h-3 text-emerald-600" />
+                            Tanpa Masa Tunggu (0 Hari)
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="w-3 h-3 text-amber-600" />
+                            Masa Tenggang {tier.waiting_period_days || 14} Hari
+                          </>
+                        )}
+                      </span>
+
                       {tier.bonus_months > 0 && (
                         <span className="bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                           <Gift className="w-3 h-3 text-purple-600" />
