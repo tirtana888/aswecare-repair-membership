@@ -8,40 +8,127 @@ import { ArrowLeft, Upload, AlertCircle, Wrench } from 'lucide-react'
 import { Card, Button, Input, Select, Textarea, FormField } from '@/components/ui'
 
 const DAMAGE_TYPES_MAP: Record<string, string[]> = {
-  sneaker: [
-    'Jahitan lepas (upper)',
-    'Sol aus/terkelupas',
-    'Cleaning deep (kotor berat, noda)',
-    'Ganti tali/eyelet rusak',
-    'Reglue sol',
-    'Kerusakan lain (manual review)',
+  // Audio & TWS
+  audio: [
+    'Suara Mati Sebelah (Kiri / Kanan)',
+    'Baterai TWS / Case Drop / Rusak',
+    'Port Charging Case Tidak Mengisi / Longgar',
+    'Koneksi Bluetooth Putus-Putus / Unpair',
+    'Mikrofon Suara Kecil / Rusak',
+    'Kerusakan Fisik Case / Engsel Retak',
+    'Kerusakan Lain (Manual Review)',
   ],
-  kaos: [
-    'Jahitan sobek',
-    'Ganti resleting/kancing',
-    'Patch/tambal',
-    'Reprint sablon pudar',
-    'Kerusakan lain (manual review)',
-  ],
-  hoodie: [
-    'Jahitan sobek',
-    'Ganti resleting/kancing',
-    'Patch/tambal',
-    'Reprint sablon pudar',
-    'Kerusakan lain (manual review)',
-  ],
-  accessories: [
-    'Ganti kabel/konektor rusak',
-    'Kalibrasi ulang',
-    'Cleaning internal (debu/kotoran)',
-    'Kerusakan lain (manual review)',
-  ],
+  // Smartphone / HP
   handphone: [
-    'Ganti baterai (drop performa)',
-    'Servis konektor charging',
-    'Cleaning port/speaker',
-    'Kerusakan lain (manual review)',
+    'Layar Pecah / Touchscreen Tidak Merespon',
+    'Ganti Baterai (Drop Performa / Kembung)',
+    'Servis Konektor Charging / Port USB-C / Lightning',
+    'Kamera Belakang / Depan Blur / Mati',
+    'Speaker / Receiver Suara Sember / Mati',
+    'Tombol Power / Volume Tidak Berfungsi',
+    'Kerusakan Lain (Manual Review)',
   ],
+  // Laptop & Tablet
+  laptop: [
+    'Layar LCD Bergaris / Blank / Pecah',
+    'Baterai Drop / Tidak Bisa Charge',
+    'Keyboard / Touchpad Rusak / Tombol Lepas',
+    'Engsel Body Retak / Patah',
+    'Overheating / Kipas Bising / Mati Total',
+    'Port USB / Type-C / HDMI Longgar',
+    'Kerusakan Lain (Manual Review)',
+  ],
+  // Smartwatch & Wearables
+  wearable: [
+    'Layar Touchscreen Retak / Blank',
+    'Baterai Drop / Magnet Charging Error',
+    'Sensor Detak Jantung / GPS Error',
+    'Strap / Tali Jam Putus / Pengait Rusak',
+    'Kerusakan Lain (Manual Review)',
+  ],
+  // Sepatu & Sneaker
+  sneaker: [
+    'Sol Aus / Terkelupas / Midsole Yellowing',
+    'Jahitan Upper Lepas / Sobek',
+    'Cleaning Deep (Kotor Berat / Noda Bandel)',
+    'Ganti Tali / Eyelet Rusak',
+    'Reglue Sol / Lem Terbuka',
+    'Kerusakan Lain (Manual Review)',
+  ],
+  // Pakaian & Fashion
+  fashion: [
+    'Jahitan Sobek / Lepas',
+    'Resleting / Kancing Rusak / Lepas',
+    'Patch / Tambal Kain',
+    'Sablon / Print Pudar / Luntur',
+    'Warna Luntur / Noda Permanent',
+    'Kerusakan Lain (Manual Review)',
+  ],
+}
+
+function getDamageOptions(item: any): string[] {
+  if (!item) return DAMAGE_TYPES_MAP.sneaker
+
+  const subcatName = (item.subcategories?.name || '').toLowerCase()
+  const subcatSlug = (item.subcategories?.slug || '').toLowerCase()
+  const brandModel = (item.brand + ' ' + item.model).toLowerCase()
+  const categoryName = (item.subcategories?.categories?.name || '').toLowerCase()
+
+  // 1. Check Audio / TWS / Airbud / Headphone / Earphone
+  if (
+    subcatName.includes('tws') || subcatName.includes('airbud') || subcatName.includes('headphone') ||
+    subcatName.includes('earphone') || subcatName.includes('audio') || subcatSlug.includes('tws') ||
+    subcatSlug.includes('audio') || subcatSlug.includes('accessories') || brandModel.includes('tws') ||
+    brandModel.includes('airbud') || brandModel.includes('bud') || brandModel.includes('headphone')
+  ) {
+    return DAMAGE_TYPES_MAP.audio
+  }
+
+  // 2. Check Smartphone / Handphone
+  if (
+    subcatName.includes('hp') || subcatName.includes('phone') || subcatName.includes('smartphone') ||
+    subcatSlug.includes('handphone') || subcatSlug.includes('phone')
+  ) {
+    return DAMAGE_TYPES_MAP.handphone
+  }
+
+  // 3. Check Laptop / Tablet
+  if (
+    subcatName.includes('laptop') || subcatName.includes('macbook') || subcatName.includes('tablet') ||
+    subcatName.includes('ipad') || subcatSlug.includes('laptop') || subcatSlug.includes('tablet')
+  ) {
+    return DAMAGE_TYPES_MAP.laptop
+  }
+
+  // 4. Check Smartwatch / Wearable
+  if (
+    subcatName.includes('watch') || subcatName.includes('wearable') || subcatSlug.includes('watch')
+  ) {
+    return DAMAGE_TYPES_MAP.wearable
+  }
+
+  // 5. Check Fashion / Apparels
+  if (
+    subcatName.includes('kaos') || subcatName.includes('hoodie') || subcatName.includes('baju') ||
+    subcatName.includes('pakaian') || subcatName.includes('jacket') || categoryName.includes('fashion') ||
+    subcatSlug.includes('kaos') || subcatSlug.includes('hoodie')
+  ) {
+    return DAMAGE_TYPES_MAP.fashion
+  }
+
+  // 6. Check Sneaker / Sepatu
+  if (
+    subcatName.includes('sepatu') || subcatName.includes('sneaker') || subcatSlug.includes('sneaker')
+  ) {
+    return DAMAGE_TYPES_MAP.sneaker
+  }
+
+  // Fallback by Category Name
+  if (categoryName.includes('elektronik') || categoryName.includes('electronic')) {
+    return DAMAGE_TYPES_MAP.audio
+  }
+
+  return DAMAGE_TYPES_MAP.sneaker
 }
 
 function ClaimFormContent() {
@@ -72,7 +159,7 @@ function ClaimFormContent() {
       .from('items')
       .select(`
         *,
-        subcategories (*),
+        subcategories (*, categories(name)),
         plans (*)
       `)
       .eq('id', itemId)
@@ -82,8 +169,7 @@ function ClaimFormContent() {
       setError('Barang tidak ditemukan.')
     } else {
       setItem(data)
-      const slug = data.subcategories?.slug || 'sneaker'
-      const options = DAMAGE_TYPES_MAP[slug] || DAMAGE_TYPES_MAP['sneaker']
+      const options = getDamageOptions(data)
       setDamageType(options[0])
     }
     setLoading(false)
@@ -150,8 +236,7 @@ function ClaimFormContent() {
 
   if (loading) return <div className="py-16 text-center text-xs text-slate-500">Memuat data barang...</div>
 
-  const subcatSlug = item?.subcategories?.slug || 'sneaker'
-  const damageOptions = DAMAGE_TYPES_MAP[subcatSlug] || DAMAGE_TYPES_MAP['sneaker']
+  const damageOptions = getDamageOptions(item)
 
   return (
     <div className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
