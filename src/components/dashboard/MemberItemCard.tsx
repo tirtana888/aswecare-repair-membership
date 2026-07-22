@@ -233,12 +233,12 @@ export default function MemberItemCard({ item, index }: MemberItemCardProps) {
           <div className="mt-auto pt-1">
             {!activePlan || activePlan.status !== 'active' ? (
               <Button
-                href={`/dashboard/checkout?itemId=${item.id}`}
+                href={`/dashboard/protection-select?itemId=${item.id}`}
                 fullWidth
                 size="md"
                 icon={<CreditCard className="w-4 h-4" />}
               >
-                Bayar Membership Sekarang
+                Pilih Proteksi &amp; Bayar
               </Button>
             ) : (
               <div className="flex items-center gap-2">

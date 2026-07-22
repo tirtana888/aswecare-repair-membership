@@ -8,12 +8,9 @@ import { Card, Button } from '@/components/ui'
 import { cn, formatIDR } from '@/lib/utils'
 
 function CheckoutContent() {
-  const searchParams = searchParamsHook()
+  const searchParams = useSearchParams()
   const itemId = searchParams.get('itemId')
-
-  function searchParamsHook() {
-    return useSearchParams()
-  }
+  const tierId = searchParams.get('tierId')
 
   const [item, setItem] = useState<any>(null)
   const [membershipTiers, setMembershipTiers] = useState<any[]>([])
@@ -30,7 +27,7 @@ function CheckoutContent() {
 
   useEffect(() => {
     fetchData()
-  }, [itemId])
+  }, [itemId, tierId])
 
   const fetchData = async () => {
     const { data: tiers } = await supabase
@@ -41,7 +38,8 @@ function CheckoutContent() {
 
     if (tiers && tiers.length > 0) {
       setMembershipTiers(tiers)
-      setSelectedTier(tiers[0])
+      const target = tierId ? tiers.find((t) => t.id === tierId) : null
+      setSelectedTier(target || tiers[0])
     }
 
     if (itemId) {
