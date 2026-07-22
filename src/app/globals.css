@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f6f8fb;
+  --foreground: #0f172a;
+  --primary: #1d4ed8;
+  --primary-foreground: #ffffff;
+}
+
+* {
+  border-color: theme('colors.slate.200');
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Consistent, visible focus state for keyboard users across the whole app */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--primary);
+  border-radius: 6px;
+}
+
+/* Subtle Stripe-style scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: theme('colors.slate.300');
+  border-radius: 8px;
+  border: 2px solid transparent;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: theme('colors.slate.400');
+}
+
+/* Badge semantik status — sumber warna tunggal, dipakai StatusBadge & legacy markup */
+.badge-protected {
+  @apply bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5;
+}
+
+.badge-extended {
+  @apply bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5;
+}
+
+.badge-waiting {
+  @apply bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5;
+}
+
+.badge-review {
+  @apply bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5;
+}
+
+.badge-danger {
+  @apply bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5;
+}
+
+.badge-neutral {
+  @apply bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5;
+}
