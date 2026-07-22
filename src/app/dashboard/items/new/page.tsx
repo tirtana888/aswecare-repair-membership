@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ArrowRight, Check, Upload, Footprints, Smartphone, AlertCircle, ShoppingBag, CreditCard } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Upload, Footprints, Smartphone, AlertCircle, ShoppingBag, CreditCard, FileText, Hash } from 'lucide-react'
 import { Card, Button, Input, FormField } from '@/components/ui'
 import { cn, formatIDR } from '@/lib/utils'
 
@@ -24,6 +24,8 @@ export default function AddItemWizard() {
   const [selectedSubcategory, setSelectedSubcategory] = useState('')
   const [brand, setBrand] = useState('')
   const [model, setModel] = useState('')
+  const [serialNumber, setSerialNumber] = useState('')
+  const [receiptUrl, setReceiptUrl] = useState('')
   const [estimatedValue, setEstimatedValue] = useState('')
   const [purchaseDate, setPurchaseDate] = useState('')
   const [purchaseChannel, setPurchaseChannel] = useState('')
@@ -74,6 +76,8 @@ export default function AddItemWizard() {
       subcategory_id: selectedSubcategory,
       brand,
       model,
+      serial_number: serialNumber || null,
+      receipt_url: receiptUrl || null,
       estimated_value: parseFloat(estimatedValue) || 0,
       purchase_date: purchaseDate || null,
       purchase_channel: purchaseChannel || 'Toko Resmi / Direct',
@@ -87,7 +91,7 @@ export default function AddItemWizard() {
       return
     }
 
-    router.push(`/dashboard/checkout?itemId=${newItem.id}`)
+    router.push(`/dashboard/protection-select?itemId=${newItem.id}`)
     router.refresh()
   }
 
@@ -118,20 +122,20 @@ export default function AddItemWizard() {
                   className={cn(
                     'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition',
                     step > s.id
-                      ? 'bg-primary-600 text-white'
+                      ? 'bg-indigo-600 text-white'
                       : step === s.id
-                      ? 'bg-primary-600 text-white ring-4 ring-primary-100'
+                      ? 'bg-indigo-600 text-white ring-4 ring-indigo-100'
                       : 'bg-slate-100 text-slate-400'
                   )}
                 >
                   {step > s.id ? <Check className="w-3.5 h-3.5" /> : s.id}
                 </div>
-                <span className={cn('text-[10px] font-semibold whitespace-nowrap', step >= s.id ? 'text-primary-700' : 'text-slate-400')}>
+                <span className={cn('text-[10px] font-semibold whitespace-nowrap', step >= s.id ? 'text-indigo-700' : 'text-slate-400')}>
                   {s.label}
                 </span>
               </div>
               {idx < STEPS.length - 1 && (
-                <div className={cn('h-0.5 flex-1 mx-1.5 mb-4 rounded-full', step > s.id ? 'bg-primary-600' : 'bg-slate-100')} />
+                <div className={cn('h-0.5 flex-1 mx-1.5 mb-4 rounded-full', step > s.id ? 'bg-indigo-600' : 'bg-slate-100')} />
               )}
             </div>
           ))}
@@ -160,12 +164,12 @@ export default function AddItemWizard() {
                     className={cn(
                       'p-4 rounded-xl border text-left transition flex items-center gap-3',
                       selectedCategory === cat.id
-                        ? 'border-primary-600 bg-primary-50/50 text-primary-900 font-semibold'
+                        ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 font-semibold'
                         : 'border-slate-200 hover:border-slate-300 bg-white'
                     )}
                   >
                     {cat.name.toLowerCase().includes('fashion') ? (
-                      <Footprints className="w-5 h-5 text-primary-600" />
+                      <Footprints className="w-5 h-5 text-indigo-600" />
                     ) : (
                       <Smartphone className="w-5 h-5 text-purple-600" />
                     )}
@@ -190,7 +194,7 @@ export default function AddItemWizard() {
                       className={cn(
                         'p-3 rounded-xl border text-center transition text-xs',
                         selectedSubcategory === sub.id
-                          ? 'border-primary-600 bg-primary-600 text-white font-semibold'
+                          ? 'border-indigo-600 bg-indigo-600 text-white font-semibold'
                           : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'
                       )}
                     >
@@ -265,8 +269,37 @@ export default function AddItemWizard() {
 
             <FormField
               label={
+                <span className="flex items-center gap-1 text-slate-700">
+                  <Hash className="w-3.5 h-3.5 text-indigo-600" /> Nomor Seri / S/N / IMEI (Opsional)
+                </span>
+              }
+            >
+              <Input
+                placeholder="Contoh: SN-90234812398 atau IMEI 35489028..."
+                value={serialNumber}
+                onChange={(e) => setSerialNumber(e.target.value)}
+              />
+            </FormField>
+
+            <FormField
+              label={
+                <span className="flex items-center gap-1 text-slate-700">
+                  <FileText className="w-3.5 h-3.5 text-emerald-600" /> Unggah Struk / Nota Pembelian (Opsional)
+                </span>
+              }
+            >
+              <Input
+                type="url"
+                placeholder="https://example.com/struk-nota.jpg (URL Nota Pembelian)"
+                value={receiptUrl}
+                onChange={(e) => setReceiptUrl(e.target.value)}
+              />
+            </FormField>
+
+            <FormField
+              label={
                 <span className="flex items-center gap-1">
-                  <ShoppingBag className="w-3.5 h-3.5 text-primary-600" /> Toko Pembelian / Channel Pembelian
+                  <ShoppingBag className="w-3.5 h-3.5 text-indigo-600" /> Toko Pembelian / Channel Pembelian
                 </span>
               }
             >
@@ -303,22 +336,30 @@ export default function AddItemWizard() {
                 <span className="text-slate-500">Merek &amp; Model:</span>
                 <span className="font-bold text-slate-900">{brand} {model}</span>
               </div>
+              {serialNumber && (
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-500">Nomor Seri / IMEI:</span>
+                  <span className="font-semibold text-indigo-600">{serialNumber}</span>
+                </div>
+              )}
+              {receiptUrl && (
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-500">Struk / Nota Pembelian:</span>
+                  <span className="font-semibold text-emerald-600 truncate max-w-[200px]">Struk Terlampir ✓</span>
+                </div>
+              )}
               <div className="flex justify-between border-b border-slate-200 pb-2">
-                <span className="text-slate-500">Toko / Channel Pembelian:</span>
-                <span className="font-semibold text-primary-800">{purchaseChannel}</span>
+                <span className="text-slate-500">Toko Pembelian:</span>
+                <span className="font-semibold text-indigo-800">{purchaseChannel}</span>
               </div>
-              <div className="flex justify-between border-b border-slate-200 pb-2">
+              <div className="flex justify-between">
                 <span className="text-slate-500">Estimasi Nilai:</span>
                 <span className="font-semibold text-slate-900">{formatIDR(estimatedValue)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Jumlah Foto:</span>
-                <span className="font-semibold text-slate-900">{photoUrls.length} Foto Sudut</span>
-              </div>
             </div>
 
-            <div className="p-3 bg-primary-50 border border-primary-200 text-primary-800 text-xs rounded-xl flex items-center gap-2 font-medium">
-              <CreditCard className="w-4 h-4 text-primary-600 shrink-0" />
+            <div className="p-3 bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs rounded-xl flex items-center gap-2 font-medium">
+              <CreditCard className="w-4 h-4 text-indigo-600 shrink-0" />
               <span>Setelah menekan tombol simpan, Anda akan langsung diarahkan ke halaman Pilihan Paket Membership &amp; Pembayaran.</span>
             </div>
 

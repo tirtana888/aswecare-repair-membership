@@ -41,6 +41,8 @@ export default function PartnerRegisterPage() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
+  const [serialNumber, setSerialNumber] = useState('');
+  const [receiptUrl, setReceiptUrl] = useState('');
   const [estimatedValue, setEstimatedValue] = useState('');
   const [purchaseDate, setPurchaseDate] = useState('');
 
@@ -136,7 +138,11 @@ export default function PartnerRegisterPage() {
         body: JSON.stringify({
           customerName, customerEmail, customerPhone,
           subcategoryId: selectedSubcategory,
-          brand, model, estimatedValue: parseFloat(estimatedValue) || 0,
+          brand,
+          model,
+          serialNumber: serialNumber || null,
+          receiptUrl: receiptUrl || null,
+          estimatedValue: parseFloat(estimatedValue) || 0,
           purchaseDate: purchaseDate || null,
           photoUrls,
           tierId: selectedTier?.id,
@@ -365,6 +371,23 @@ export default function PartnerRegisterPage() {
                   value={model} 
                   onChange={(e) => setModel(e.target.value)} 
                   placeholder="Misal: Galaxy S23 Ultra"
+                />
+              </FormField>
+
+              <FormField label="Nomor Seri / IMEI / S/N (Opsional)">
+                <Input 
+                  value={serialNumber} 
+                  onChange={(e) => setSerialNumber(e.target.value)} 
+                  placeholder="Misal: SN-90238491238 atau IMEI 35489028..."
+                />
+              </FormField>
+
+              <FormField label="Unggah Struk / Nota Pembelian (URL / Gambar Opsional)">
+                <Input 
+                  type="url"
+                  value={receiptUrl} 
+                  onChange={(e) => setReceiptUrl(e.target.value)} 
+                  placeholder="https://example.com/struk-nota.jpg (URL Nota Pembelian)"
                 />
               </FormField>
 

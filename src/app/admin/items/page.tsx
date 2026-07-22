@@ -181,7 +181,7 @@ export default function ItemsPage() {
               </div>
 
               {/* Member info strip */}
-              <div className="grid grid-cols-3 gap-3 bg-white border border-slate-200 rounded-xl p-4 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white border border-slate-200 rounded-xl p-4 text-xs">
                 <div className="flex items-center gap-2">
                   <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                   <div className="min-w-0">
@@ -199,8 +199,26 @@ export default function ItemsPage() {
                 <div className="flex items-center gap-2">
                   <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-slate-400">Didaftarkan</p>
-                    <p className="font-semibold text-slate-800 truncate">{formatDateID(selectedItem.created_at)}</p>
+                    <p className="text-slate-400">Nomor Seri / S/N</p>
+                    <p className="font-semibold text-indigo-700 truncate">{selectedItem.serial_number || '-'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FileText className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-slate-400">Struk / Nota</p>
+                    {selectedItem.receipt_url ? (
+                      <a
+                        href={selectedItem.receipt_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-bold text-emerald-600 hover:underline truncate block"
+                      >
+                        Lihat Struk ↗
+                      </a>
+                    ) : (
+                      <p className="font-semibold text-slate-400 truncate">Tidak Ada</p>
+                    )}
                   </div>
                 </div>
               </div>
