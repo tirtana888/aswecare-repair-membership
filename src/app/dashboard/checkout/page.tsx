@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Lock, ArrowLeft, QrCode, Gift, ShoppingBag, AlertCircle, CheckCircle2, ShieldCheck, Zap, Percent } from 'lucide-react'
+import { Lock, ArrowLeft, QrCode, Gift, ShoppingBag, AlertCircle, CheckCircle2, ShieldCheck, Zap, Percent, Clock } from 'lucide-react'
 import { Card, Button } from '@/components/ui'
 import { cn, formatIDR } from '@/lib/utils'
 
